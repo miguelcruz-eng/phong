@@ -9,12 +9,17 @@
 #include <math.h>
 #include "GL/freeglut.h"
 #pragma comment(lib, "OpenGL32.lib")
-//#include <SFML/Audio.hpp>
+#include <AL/al.h>
+#include <AL/alc.h>
+#include "stb_vorbis.c"
 
-//#include <include/irrKlang.h>
-//using namespace irrklang;
+ALuint testSound; // ID do som de rebatida
+ALuint outroSound; // ID do som de rebatida
+ALCdevice* audioDevice;
+ALCcontext* audioContext;
 
-//ISoundEngine *SoundEngine = createIrrKlangDevice();
+ALuint testSource; // Variável para a fonte de som de rebatida
+ALuint outroSource; // Variável para a fonte de som de rebatida
 
 // window size and update rate (60 fps)
 GLint width = 500;
@@ -234,6 +239,8 @@ void updateBall() {
     // fly a bit
     ball_pos_x += ball_dir_x * ball_speed;
     ball_pos_y += ball_dir_y * ball_speed;
+
+    alSourcePlay(testSound);
     
     // rotate a bit
     if(ball_dir_x > 0){
@@ -254,7 +261,6 @@ void updateBall() {
         ball_dir_y = t;
         ball_speed += 0.2;
         ball_rot_speed += 2;
-        //SoundEngine->play2D("audio/solid.wav");
     }
 
     // Colisao com a barra direita
@@ -269,7 +275,6 @@ void updateBall() {
         ball_dir_y = t;
         ball_speed += 0.2;
         ball_rot_speed += 2;
-        //SoundEngine->play2D("audio/solid.wav");
     }
 
     // colisao na esquerda
@@ -289,6 +294,21 @@ void updateBall() {
         ball_rot_speed = 0;
         point = 2;
     }
+
+    // // Crie uma fonte de som para o vencedor
+    // alGenSources(1, &outroSource);
+    
+    // // Carrega o som de vencedor
+    // alGenBuffers(1, &outroSound);
+    // {
+    //     int canais, amostraRate;
+    //     short* soundData;
+    //     int amostras = stb_vorbis_decode_filename("outro.ogg", &canais, &amostraRate, &soundData);
+    //     if (amostras != -1) {
+    //         alBufferData(outroSound, AL_FORMAT_MONO16, soundData, amostras * sizeof(short), amostraRate);
+    //         free(soundData);
+    //     }
+    // }
 
     if(ball_speed == 0 && point == 1){
         ball_pos_x = racket_right_x - ball_size/2;
@@ -438,6 +458,36 @@ void keyUp(unsigned char key, int x, int y) {
 void idle(){
     glutPostRedisplay();
 }
+
+// Função para inicializar configurações de áudio
+void initAudio() {
+    // Inicializa o dispositivo de áudio
+    audioDevice = alcOpenDevice(nullptr);
+    audioContext = alcCreateContext(audioDevice, nullptr);
+    alcMakeContextCurrent(audioContext);
+
+    // Crie uma fonte de som para a rebatida
+    alGenSources(1, &testSound);
+    
+    // Carrega o som de rebatida
+    alGenBuffers(1, &testSource);
+    {
+        int canais, amostraRate;
+        short* soundData;
+        int amostras = stb_vorbis_decode_filename("slash1-94367.ogg", &canais, &amostraRate, &soundData);
+        if (amostras != -1) {
+            alBufferData(testSound, AL_FORMAT_MONO16, soundData, amostras * sizeof(short), amostraRate);
+            free(soundData);
+        }
+    }
+
+    // Configure a fonte de som para o som de rebatida
+    alSourcei(testSource, AL_BUFFER, testSound);
+    alSourcef(testSource, AL_GAIN, 1.0f); // Define o volume 
+    alSourcef(testSource, AL_PITCH, 1.0f); // Definie velocidade
+   
+}
+
 // program entry point
 int main(int argc, char** argv) {
 
