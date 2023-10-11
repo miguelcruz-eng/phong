@@ -13,13 +13,15 @@
 #include <AL/alc.h>
 #include "stb_vorbis.c"
 
-ALuint testSound; // ID do som de rebatida
-ALuint outroSound; // ID do som de rebatida
+ALuint racketSound; // ID do som de rebatida
+ALuint pointSound; // ID do som de pontuação
+ALuint winSound; // ID do som de fim de jogo
 ALCdevice* audioDevice;
 ALCcontext* audioContext;
 
-ALuint testSource; // Variável para a fonte de som de rebatida
-ALuint outroSource; // Variável para a fonte de som de rebatida
+ALuint racketSource; // Variável para a fonte de som de rebatida
+ALuint pointSource; // Variável para a fonte de som de pontuação
+ALuint winSource; // Variável para a fonte de som de pontuação
 
 // window size and update rate (60 fps)
 GLint width = 500;
@@ -239,8 +241,6 @@ void updateBall() {
     // fly a bit
     ball_pos_x += ball_dir_x * ball_speed;
     ball_pos_y += ball_dir_y * ball_speed;
-
-    alSourcePlay(testSound);
     
     // rotate a bit
     if(ball_dir_x > 0){
@@ -261,6 +261,7 @@ void updateBall() {
         ball_dir_y = t;
         ball_speed += 0.2;
         ball_rot_speed += 2;
+        alSourcePlay(racketSound);
     }
 
     // Colisao com a barra direita
@@ -275,6 +276,7 @@ void updateBall() {
         ball_dir_y = t;
         ball_speed += 0.2;
         ball_rot_speed += 2;
+        alSourcePlay(racketSound);
     }
 
     // colisao na esquerda
@@ -284,6 +286,10 @@ void updateBall() {
         ball_speed = 0;
         ball_rot_speed = 0;
         point = 1;
+        if(score_right<3)
+            alSourcePlay(pointSound);
+        else
+            alSourcePlay(winSound);
     }
 
     // colisao na direita
@@ -293,22 +299,11 @@ void updateBall() {
         ball_speed = 0;
         ball_rot_speed = 0;
         point = 2;
+        if(score_left<3)
+            alSourcePlay(pointSound);
+        else
+            alSourcePlay(winSound);
     }
-
-    // // Crie uma fonte de som para o vencedor
-    // alGenSources(1, &outroSource);
-    
-    // // Carrega o som de vencedor
-    // alGenBuffers(1, &outroSound);
-    // {
-    //     int canais, amostraRate;
-    //     short* soundData;
-    //     int amostras = stb_vorbis_decode_filename("outro.ogg", &canais, &amostraRate, &soundData);
-    //     if (amostras != -1) {
-    //         alBufferData(outroSound, AL_FORMAT_MONO16, soundData, amostras * sizeof(short), amostraRate);
-    //         free(soundData);
-    //     }
-    // }
 
     if(ball_speed == 0 && point == 1){
         ball_pos_x = racket_right_x - ball_size/2;
@@ -460,36 +455,75 @@ void idle(){
 }
 
 // Função para inicializar configurações de áudio
-void initAudio() {
+void audioMix() {
     // Inicializa o dispositivo de áudio
     audioDevice = alcOpenDevice(nullptr);
     audioContext = alcCreateContext(audioDevice, nullptr);
     alcMakeContextCurrent(audioContext);
 
     // Crie uma fonte de som para a rebatida
-    alGenSources(1, &testSound);
+    alGenSources(1, &racketSound);
     
     // Carrega o som de rebatida
-    alGenBuffers(1, &testSource);
+    alGenBuffers(1, &racketSource);
     {
         int canais, amostraRate;
         short* soundData;
-        int amostras = stb_vorbis_decode_filename("slash1-94367.ogg", &canais, &amostraRate, &soundData);
+        int amostras = stb_vorbis_decode_filename("solid.ogg", &canais, &amostraRate, &soundData);
         if (amostras != -1) {
-            alBufferData(testSound, AL_FORMAT_MONO16, soundData, amostras * sizeof(short), amostraRate);
+            alBufferData(racketSound, AL_FORMAT_MONO16, soundData, amostras * sizeof(short), amostraRate);
             free(soundData);
         }
     }
 
     // Configure a fonte de som para o som de rebatida
-    alSourcei(testSource, AL_BUFFER, testSound);
-    alSourcef(testSource, AL_GAIN, 1.0f); // Define o volume 
-    alSourcef(testSource, AL_PITCH, 1.0f); // Definie velocidade
+    alSourcei(racketSource, AL_BUFFER, racketSound);
+    alSourcef(racketSource, AL_GAIN, 1.0f); // Define o volume 
+    alSourcef(racketSource, AL_PITCH, 2.0f); // Definie velocidade
+
+    // Crie uma fonte de som para a pontuação
+    alGenSources(1, &pointSound);
+    
+    // Carrega o som de pontuação
+    alGenBuffers(1, &pointSource);
+    {
+        int canais, amostraRate;
+        short* soundData;
+        int amostras = stb_vorbis_decode_filename("powerup.ogg", &canais, &amostraRate, &soundData);
+        if (amostras != -1) {
+            alBufferData(pointSound, AL_FORMAT_MONO16, soundData, amostras * sizeof(short), amostraRate);
+            free(soundData);
+        }
+    }
+
+    alSourcei(pointSource, AL_BUFFER, pointSound);
+    alSourcef(pointSource, AL_GAIN, 1.0f); // Define o volume 
+    alSourcef(pointSource, AL_PITCH, 1.0f); // Definie velocidade
+
+    // Crie uma fonte de som para a vitoria
+    alGenSources(1, &winSound);
+    
+    // Carrega o som de vitoria
+    alGenBuffers(1, &winSource);
+    {
+        int canais, amostraRate;
+        short* soundData;
+        int amostras = stb_vorbis_decode_filename("Crowd-Laughs-Cheering-And-Applauding-3.ogg", &canais, &amostraRate, &soundData);
+        if (amostras != -1) {
+            alBufferData(winSound, AL_FORMAT_MONO16, soundData, amostras * sizeof(short), amostraRate);
+            free(soundData);
+        }
+    }
+
+    alSourcei(winSource, AL_BUFFER, winSound);
+    alSourcef(winSource, AL_GAIN, 1.0f); // Define o volume 
+    alSourcef(winSource, AL_PITCH, 1.0f); // Definie velocidade
    
 }
 
 // program entry point
 int main(int argc, char** argv) {
+    audioMix();
 
     // initialize opengl (via glut)
     glutInit(&argc, argv);
