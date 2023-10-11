@@ -16,12 +16,14 @@
 ALuint racketSound; // ID do som de rebatida
 ALuint pointSound; // ID do som de pontuação
 ALuint winSound; // ID do som de fim de jogo
+ALuint themeMusic; // ID da musica de fundo
 ALCdevice* audioDevice;
 ALCcontext* audioContext;
 
 ALuint racketSource; // Variável para a fonte de som de rebatida
 ALuint pointSource; // Variável para a fonte de som de pontuação
 ALuint winSource; // Variável para a fonte de som de pontuação
+ALuint themeMusicSource; // Variável para a musica de fundo
 
 // window size and update rate (60 fps)
 GLint width = 500;
@@ -220,10 +222,10 @@ void updateBarras(){
     }
     
     // left racket
-    if (keys['w']){
+    if (keys['w']||keys['W']){
         racket_left_y += racket_speed;
     } 
-    if (keys['s']){
+    if (keys['s']||keys['S']){
         racket_left_y -= racket_speed;
     }
 
@@ -337,38 +339,6 @@ void updateBall() {
     vec2_norm(ball_dir_x, ball_dir_y);
 }
 
-void normalKeyboard(unsigned char key, int x, int y) {
-
-    switch (key) {
-        case 13:// enter
-            if(point != -1)
-                point = 0;
-
-        break;
-        case 27: // Tecla Esc
-        exit(0);
-        
-        break;
-        case 32: // escpaco
-            if(gameOver){
-                gameOver = false;
-                score_left = 0;
-                score_right = 0;
-                point = 0;
-                ball_pos_x = width/2;
-                ball_pos_y = height/2;
-            }
-                
-            if(paused)
-                paused = false;
-            else
-                paused = true;
-            
-        break;
-    }
-    
-}
-
 void update(int value) {
     if(score_left <= 2 && score_right <= 2){
         if(!paused){
@@ -469,7 +439,7 @@ void audioMix() {
     {
         int canais, amostraRate;
         short* soundData;
-        int amostras = stb_vorbis_decode_filename("solid.ogg", &canais, &amostraRate, &soundData);
+        int amostras = stb_vorbis_decode_filename("sound/solid.ogg", &canais, &amostraRate, &soundData);
         if (amostras != -1) {
             alBufferData(racketSound, AL_FORMAT_MONO16, soundData, amostras * sizeof(short), amostraRate);
             free(soundData);
@@ -478,7 +448,7 @@ void audioMix() {
 
     // Configure a fonte de som para o som de rebatida
     alSourcei(racketSource, AL_BUFFER, racketSound);
-    alSourcef(racketSource, AL_GAIN, 1.0f); // Define o volume 
+    alSourcef(racketSource, AL_GAIN, 2.0f); // Define o volume 
     alSourcef(racketSource, AL_PITCH, 2.0f); // Definie velocidade
 
     // Crie uma fonte de som para a pontuação
@@ -489,7 +459,7 @@ void audioMix() {
     {
         int canais, amostraRate;
         short* soundData;
-        int amostras = stb_vorbis_decode_filename("powerup.ogg", &canais, &amostraRate, &soundData);
+        int amostras = stb_vorbis_decode_filename("sound/mixkit-retro-game-notification-212.ogg", &canais, &amostraRate, &soundData);
         if (amostras != -1) {
             alBufferData(pointSound, AL_FORMAT_MONO16, soundData, amostras * sizeof(short), amostraRate);
             free(soundData);
@@ -497,7 +467,7 @@ void audioMix() {
     }
 
     alSourcei(pointSource, AL_BUFFER, pointSound);
-    alSourcef(pointSource, AL_GAIN, 1.0f); // Define o volume 
+    alSourcef(pointSource, AL_GAIN, 0.2f); // Define o volume 
     alSourcef(pointSource, AL_PITCH, 1.0f); // Definie velocidade
 
     // Crie uma fonte de som para a vitoria
@@ -508,7 +478,7 @@ void audioMix() {
     {
         int canais, amostraRate;
         short* soundData;
-        int amostras = stb_vorbis_decode_filename("Crowd-Laughs-Cheering-And-Applauding-3.ogg", &canais, &amostraRate, &soundData);
+        int amostras = stb_vorbis_decode_filename("sound/Crowd-Laughs-Cheering-And-Applauding-3.ogg", &canais, &amostraRate, &soundData);
         if (amostras != -1) {
             alBufferData(winSound, AL_FORMAT_MONO16, soundData, amostras * sizeof(short), amostraRate);
             free(soundData);
@@ -516,14 +486,35 @@ void audioMix() {
     }
 
     alSourcei(winSource, AL_BUFFER, winSound);
-    alSourcef(winSource, AL_GAIN, 1.0f); // Define o volume 
+    alSourcef(winSource, AL_GAIN, 1.5f); // Define o volume 
     alSourcef(winSource, AL_PITCH, 1.0f); // Definie velocidade
    
+   // Crie uma fonte de som para a rebatida
+    alGenSources(1, &themeMusic);
+    
+    // Carrega o som de rebatida
+    alGenBuffers(1, &themeMusicSource);
+    {
+        int canais, amostraRate;
+        short* soundData;
+        int amostras = stb_vorbis_decode_filename("sound/POL-super-match-short.ogg", &canais, &amostraRate, &soundData);
+        if (amostras != -1) {
+            alBufferData(themeMusic, AL_FORMAT_MONO16, soundData, amostras * sizeof(short), amostraRate);
+            free(soundData);
+        }
+    }
+
+    // Configure a fonte de som para o som de rebatida
+    alSourcei(themeMusicSource, AL_BUFFER, themeMusic);
+    alSourcef(themeMusicSource, AL_GAIN, 0.08f); // Define o volume 
+    alSourcef(themeMusicSource, AL_PITCH, 2.0f); // Definie velocidade
+    alSourcef(themeMusicSource, AL_LOOPING, AL_TRUE); // Coloca a musica em Looping
 }
 
 // program entry point
 int main(int argc, char** argv) {
     audioMix();
+    alSourcePlay(themeMusic);
 
     // initialize opengl (via glut)
     glutInit(&argc, argv);
@@ -532,7 +523,6 @@ int main(int argc, char** argv) {
     glutCreateWindow("PHONG");
 
     // Register callback functions  
-    glutKeyboardFunc(normalKeyboard);
     glutSpecialFunc(keySPressed);
     glutSpecialUpFunc(keySUp);
     glutKeyboardFunc(keyPressed);
